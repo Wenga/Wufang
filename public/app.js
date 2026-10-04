@@ -31,12 +31,16 @@ connect();
 if(ink){
   $('paper-toggle').onchange=e=>{ink.paper=e.target.checked;};
   $('paper-height').oninput=e=>{ink.height=Number(e.target.value)/100;$('paper-value').textContent=`${e.target.value}%`;};
+  $('city-font-size').oninput=e=>{ink.cityFontSize=25*Number(e.target.value)/100;$('city-font-value').textContent=`${e.target.value}%`;};
+  $('particle-size').oninput=e=>{ink.particleScale=Number(e.target.value)/100;$('particle-value').textContent=`${e.target.value}%`;};
   if(page==='screen'){
     $('background').onchange=e=>{$('canvas-wrap').style.background=e.target.value;};
     const fullscreen=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{$('connection').textContent='请使用浏览器菜单进入全屏';}};
     $('fullscreen').onclick=fullscreen;$('canvas-wrap').ondblclick=fullscreen;
     document.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!['INPUT','SELECT'].includes(e.target.tagName))$('screen-settings').hidden=!$('screen-settings').hidden;});
-    setTimeout(()=>{$('screen-settings').hidden=true;},10000);
+    let hideSettings=setTimeout(()=>{$('screen-settings').hidden=true;},10000);
+    $('screen-settings').addEventListener('pointerdown',()=>clearTimeout(hideSettings));
+    $('screen-settings').addEventListener('focusin',()=>clearTimeout(hideSettings));
   }
 }
 if($('network')){
