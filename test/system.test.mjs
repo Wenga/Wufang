@@ -23,7 +23,8 @@ test('phone submits, display receives, second entry queues, reconnect receives c
     for(const route of ['/','/join','/screen','/app.js','/ink.js'])assert.equal((await fetch(base+route)).status,200);
     assert.equal((await fetch(base+'/missing')).status,404);
     const guest=await connect('guest');guest.send(JSON.stringify({type:'submit',city:'nanjing',tastes:['鲜']}));assert.match((await waitFor(guest,'error')).message,/尚未连接/);
-    const display=await connect('screen');guest.send(JSON.stringify({type:'submit',city:'nanjing',tastes:['鲜','柔']}));
+    const display=await connect('screen');
+    guest.send(JSON.stringify({type:'submit',city:'nanjing',tastes:['鲜','柔']}));
     const accepted=await waitFor(guest,'accepted'),stroke=await waitFor(display,'stroke');assert.equal(accepted.id,stroke.id);assert.equal(stroke.city,'nanjing');
     const second=await connect('guest');second.send(JSON.stringify({type:'submit',city:'puer',tastes:['厚']}));assert.equal((await waitFor(second,'accepted')).ahead,1);
     const resumed=await connect('screen');assert.equal((await waitFor(resumed,'stroke')).id,stroke.id);

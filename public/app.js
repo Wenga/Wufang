@@ -29,6 +29,8 @@ function connect(){
 }
 connect();
 if(ink){
+  $('ripple-city').onchange=e=>{ink.setRippleCity(e.target.value);};
+  $('landscape-toggle').onchange=e=>{ink.landscapeEnabled=e.target.checked;};
   $('paper-toggle').onchange=e=>{ink.paper=e.target.checked;};
   $('paper-height').oninput=e=>{ink.height=Number(e.target.value)/100;$('paper-value').textContent=`${e.target.value}%`;};
   $('city-font-size').oninput=e=>{ink.cityFontSize=25*Number(e.target.value)/100;$('city-font-value').textContent=`${e.target.value}%`;};

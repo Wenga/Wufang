@@ -15,7 +15,7 @@ export function createApp(port = 3000) {
   const peers = new Set(), pending = [];
   let current = null, timer;
   const addresses = Object.values(networkInterfaces()).flat().filter(n => n.family === 'IPv4' && !n.internal).map(n => `http://${n.address}:${port}/join`);
-  const files = {'/':'index.html','/join':'join.html','/screen':'screen.html','/style.css':'style.css','/app.js':'app.js','/ink.js':'ink.js','/favicon.svg':'favicon.svg'};
+  const files = {'/':'index.html','/join':'join.html','/screen':'screen.html','/style.css':'style.css','/app.js':'app.js','/ink.js':'ink.js','/fluid.js':'fluid.js','/favicon.svg':'favicon.svg','/landscape.png':'landscape.png'};
   const server = http.createServer(async (req,res) => {
     try {
       const url = new URL(req.url,'http://localhost');
@@ -27,7 +27,7 @@ export function createApp(port = 3000) {
       }
       if (!files[url.pathname]) { res.writeHead(404); return res.end('Not found'); }
       const filename = files[url.pathname];
-      res.setHeader('Content-Type', filename.endsWith('.css')?'text/css':filename.endsWith('.js')?'text/javascript':filename.endsWith('.svg')?'image/svg+xml':'text/html; charset=utf-8');
+      res.setHeader('Content-Type', filename.endsWith('.png')?'image/png':filename.endsWith('.css')?'text/css':filename.endsWith('.js')?'text/javascript':filename.endsWith('.svg')?'image/svg+xml':'text/html; charset=utf-8');
       res.setHeader('Cache-Control','no-store');
       res.end(await readFile(new URL(`./public/${filename}`,import.meta.url)));
     } catch { res.writeHead(500); res.end('Server error'); }
@@ -49,7 +49,7 @@ export function createApp(port = 3000) {
     status();
     ws.on('message',raw => {
       let data; try {data=JSON.parse(raw);} catch {return send(ws,{type:'error',message:'这笔没有送出，请重试。'});}
-      if(data.type !== 'submit' || !validInput(data)) return send(ws,{type:'error',message:'请选择一座城市和 1–2 个味觉词。'});
+      if(data?.type !== 'submit' || !validInput(data)) return send(ws,{type:'error',message:'请选择一座城市和 1–2 个味觉词。'});
       if(![...peers].some(p=>p.role==='screen')) return send(ws,{type:'error',message:'装置尚未连接，请稍后再试。'});
       if(Date.now()-ws.lastSubmit<2000) return send(ws,{type:'error',message:'请稍候片刻再落笔。'});
       if(pending.length>=12) return send(ws,{type:'error',message:'此刻落笔的人较多，请稍后再试。'});
