@@ -1,11 +1,12 @@
 import {WetInk} from './fluid.js';
-export const cities=[{id:'guangzhou',name:'广州',x:.59,y:.70},{id:'xian',name:'西安',x:.33,y:.46},{id:'nanjing',name:'南京',x:.70,y:.45},{id:'puer',name:'普洱',x:.17,y:.69},{id:'shenyang',name:'沈阳',x:.84,y:.30}];
+import {cities,createStroke} from './brush.js';
+import {Artwork} from './artwork.js';
+export {cities,tasteProfile} from './brush.js';
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 function random(seed){let s=(seed*4294967295)>>>0;return ()=>{s+=0x6D2B79F5;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
-export function tasteProfile(tastes){const p={alpha:.48,width:1,speed:1,curve:1,dots:8,dry:.18};for(const t of tastes){if(t==='清'){p.alpha*=.5;p.width*=.65;p.dots-=3;}if(t==='厚'){p.alpha*=1.5;p.width*=2;p.speed*=.78;}if(t==='鲜'){p.dots+=25;p.speed*=1.15;}if(t==='柔'){p.curve*=1.8;p.speed*=.72;p.alpha*=.8;}if(t==='烈'){p.dry+=.45;p.speed*=1.5;p.curve*=.65;p.width*=1.2;}}return p;}
 export class Ink {
   constructor(canvas,onStage=()=>{}){
-    this.canvas=canvas;this.ctx=canvas.getContext('2d');this.paper=true;this.continuousRipple=null;this.cityFontSize=25;this.particleScale=1;this.height=.5;this.strokes=[];this.onStage=onStage;this.stage='';this.last=performance.now();this.clock=0;this.nextAmbient=8;this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.artwork=new Artwork();this.canvas=canvas;this.ctx=canvas.getContext('2d');this.paper=true;this.continuousRipple=null;this.cityFontSize=25;this.particleScale=1;this.height=.5;this.strokes=[];this.onStage=onStage;this.stage='';this.last=performance.now();this.clock=0;this.nextAmbient=8;this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.landscapeEnabled=true;this.landscape=new Image();this.landscape.src='/landscape.png';
     const r=random(.318);this.particles=Array.from({length:90},()=>({x:r(),y:r(),vx:(r()-.5)*.013,vy:(r()-.5)*.014,r:.6+r()*1.2,phase:r()*6.28}));
     this.fibers=Array.from({length:650},()=>({x:r(),y:r(),length:1+r()*5,a:.012+r()*.02}));
@@ -15,16 +16,8 @@ export class Ink {
   target(city){return {x:city.x*1000,y:((1-this.height)/2+(city.y-.25)*this.height/.5)*562.5};}
   add(data,ambient=false){
     if(this.strokes.some(s=>s.id===data.id))return;
-    const rng=random(data.seed),city=cities.find(c=>c.id===data.city);if(!city)return;
-    const p=tasteProfile(data.tastes),paths=[];
-    for(let j=0;j<9;j++){
-      const angle=j*.64+rng()*.8,reach=(38+rng()*60)*p.width**.25,points=[];
-      for(let i=0;i<=65;i++){const t=i/65,a=angle+Math.sin(t*3.9+j)*.8*p.curve+t*.45;points.push({x:Math.cos(a)*reach*t,y:Math.sin(a)*reach*t*.7,width:(Math.sin(t*Math.PI)**.65+.08)*(3+Math.sin(t*8+j)*1.1)*p.width,rough:rng()});}
-      paths.push(points);
-    }
-    const arrivals=Array.from({length:26},()=>({x:rng()*1000,y:rng()<.5?rng()*90:472+rng()*90,bend:(rng()-.5)*200,delay:rng()*.35}));
-    const dots=Array.from({length:Math.max(3,p.dots)},()=>{const a=rng()*6.28,r=10+rng()*70;return{x:Math.cos(a)*r,y:Math.sin(a)*r*.65,r:.4+rng()*2.2,phase:rng()*6.28};});
-    this.strokes.push({id:data.id,city,p,paths,arrivals,dots,ambient,wet:new WetInk(),wetTime:0,wetAccumulator:0,start:performance.now()-Math.min(6000,Math.max(0,Date.now()-(data.start||Date.now())))});
+    const shape=createStroke(data);if(!shape)return;
+    this.strokes.push({...shape,ambient,wet:new WetInk(),wetTime:0,wetAccumulator:0,start:performance.now()-Math.min(6000,Math.max(0,Date.now()-(data.start||Date.now())))});
     if(this.strokes.length>50)this.strokes.shift();
   }
   setRippleCity(cityId){
@@ -79,12 +72,13 @@ export class Ink {
       c.filter='grayscale(1) blur(7px) contrast(0.7) brightness(1.15)';
       c.drawImage(image,(1000-width)/2,(562.5-height)/2,width,height);c.restore();
     }
+    this.artwork.draw(this.ctx,this.height);
     const active=this.strokes.findLast(s=>!s.ambient&&now-s.start<6000),elapsed=active?(now-active.start)/1000:99;
     const label=elapsed<.4?'墨粒暂驻，感受抵达':elapsed<2.2?'四方聚墨，汇入宣纸':elapsed<4.7?`${active.city.name} · ${active.p?active.label||'味觉成笔':''}`:elapsed<6?'余韵留痕，缓缓归静':'墨粒游离，静候一笔';
     if(label!==this.stage){this.stage=label;this.onStage(label);}
     for(const p of this.particles){if(elapsed>.4&&!this.reduced){p.x=(p.x+p.vx*dt+1)%1;p.y=(p.y+p.vy*dt+1)%1;}const inside=p.y>(1-this.height)/2&&p.y<(1+this.height)/2;c.fillStyle=inside?'rgba(35,38,30,.10)':'rgba(25,28,23,.65)';c.beginPath();c.ellipse(p.x*1000,p.y*562.5,p.r*this.particleScale*(inside?2:1),p.r*this.particleScale*(inside?.6:1),inside?Math.sin(this.clock+p.phase):0,0,6.28);c.fill();}
     if(this.clock>this.nextAmbient&&!active&&!this.reduced){this.nextAmbient=this.clock+12+Math.random()*7;this.add({id:`ambient-${now}`,seed:Math.random(),city:cities[Math.floor(Math.random()*5)].id,tastes:['清','柔']},true);}
-    this.strokes=this.strokes.filter(s=>now-s.start<180000);
+    this.strokes=this.strokes.filter(s=>now-s.start<180000&&!this.artwork.ids.has(s.id));
     for(const s of this.strokes){const age=(now-s.start)/1000;this.updateWet(s,age,dt);this.drawStroke(s,age);}
     if(this.continuousRipple){this.updateWet(this.continuousRipple,0,dt,true);this.drawRipple(this.continuousRipple,(now-this.continuousRipple.start)/1000);}
     for(const city of cities){const p=this.target(city);c.fillStyle='#20251e';c.beginPath();c.arc(p.x,p.y,3.7,0,6.28);c.fill();c.font=`${this.cityFontSize}px "Kaiti SC", "STKaiti", "KaiTi", serif`;c.textAlign='center';c.textBaseline='top';c.fillText(city.name,p.x,p.y+12);}
