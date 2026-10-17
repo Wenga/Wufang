@@ -1,3 +1,4 @@
+import {openCulture} from './culture.js';
 import {Ink,cities} from './ink.js';
 import {exportArtwork} from './artwork.js';
 import {initLanguage} from './i18n.js';
@@ -7,10 +8,26 @@ const $=id=>document.getElementById(id);
 const ink=$('ink')?new Ink($('ink'),label=>{if($('stage-label'))$('stage-label').textContent=label;}):null;
 let city=null,tastes=[],socket,connected=false,screens=0,sending=false,acceptedId=null,received=new Set(),ackTimer,finishTimer;
 let sessionId=null,operator=false,settingsTimer;
+const menu={
+  guangzhou:{flavour:'鲜',region:'广东 · 广州',dish:'豆苗鲜虾饺',tea:'菊花茶'},
+  xian:{flavour:'酸',region:'陕西 · 西安',dish:'豆花泡馍',tea:'茯砖茶'},
+  nanjing:{flavour:'咸',region:'江苏 · 南京',dish:'盐水鸭',tea:'桂花碧螺春'},
+  puer:{flavour:'辣',region:'云南 · 普洱',dish:'木姜子',tea:'佛手柑普洱'},
+  shenyang:{flavour:'甜',region:'辽宁 · 沈阳',dish:'冻梨',tea:'大麦茶'}
+};
+function showMenu(id){
+  const item=menu[id];if(!item)return;
+  $('dish-region').textContent=item.region;
+  $('dish-name').textContent=item.flavour;
+  const makeLink=kind=>{const button=document.createElement('button');button.type='button';button.className='culture-link';button.textContent=item[kind];button.setAttribute('aria-haspopup','dialog');button.onclick=()=>openCulture(`${id}-${kind}`,button);return button;};
+  const dish=makeLink('dish'),tea=makeLink('tea');
+  $('dish-description').replaceChildren(dish,document.createTextNode(' · '),tea);
+  $('dish-card').hidden=false;
+}
 const hints={'清':'淡墨 · 细笔 · 留白','厚':'重墨 · 宽笔 · 缓染','鲜':'碎点 · 轻跃 · 灵动','柔':'曲线 · 慢行 · 柔边','烈':'飞白 · 疾笔 · 顿挫'};
 if($('form-root')){
-  $('form-root').innerHTML=`<form id="taste-form"><fieldset><legend>01　选择一座城市</legend><div class="cities">${cities.map(c=>`<button class="city" type="button" data-city="${c.id}" aria-pressed="false">${c.name}</button>`).join('')}</div></fieldset><fieldset><legend>02　留下味觉印象 <small>选择 1–2 项</small></legend><div class="tastes">${Object.keys(hints).map(t=>`<button class="taste" type="button" data-taste="${t}" aria-pressed="false">${t}</button>`).join('')}</div><p class="taste-hint" id="taste-hint">清、厚、鲜、柔、烈，哪一种更接近此刻？</p></fieldset><button class="submit" id="submit" type="submit" disabled>落下一笔</button><div class="feedback" id="feedback" role="status" aria-live="polite"></div></form>`;
-  document.querySelectorAll('[data-city]').forEach(b=>b.onclick=()=>{city=b.dataset.city;document.querySelectorAll('[data-city]').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));update();});
+  $('form-root').innerHTML=`<form id="taste-form"><fieldset><legend>01　选择一座城市</legend><div class="cities">${cities.map(c=>`<button class="city" type="button" data-city="${c.id}" aria-pressed="false">${c.name}</button>`).join('')}</div></fieldset><section class="dish-card" id="dish-card" aria-labelledby="dish-name" aria-live="polite" hidden><div class="dish-kicker"><span id="dish-region"></span></div><div class="dish-summary"><h2 class="flavour-badge" id="dish-name"></h2><p id="dish-description"></p></div><p class="culture-hint">点击料理或茶饮，读一则风物小记。</p></section><fieldset><legend>02　留下味觉印象 <small>选择 1–2 项</small></legend><div class="tastes">${Object.keys(hints).map(t=>`<button class="taste" type="button" data-taste="${t}" aria-pressed="false">${t}</button>`).join('')}</div><p class="taste-hint" id="taste-hint">清、厚、鲜、柔、烈，哪一种更接近此刻？</p></fieldset><button class="submit" id="submit" type="submit" disabled>落下一笔</button><div class="feedback" id="feedback" role="status" aria-live="polite"></div></form>`;
+  document.querySelectorAll('[data-city]').forEach(b=>b.onclick=()=>{city=b.dataset.city;showMenu(city);document.querySelectorAll('[data-city]').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));update();});
   document.querySelectorAll('[data-taste]').forEach(b=>b.onclick=()=>{const t=b.dataset.taste;if(tastes.includes(t))tastes=tastes.filter(v=>v!==t);else if(tastes.length<2)tastes.push(t);else{feedback('最多选择两个味觉词，先取消一个即可更换。');return;}document.querySelectorAll('[data-taste]').forEach(n=>n.setAttribute('aria-pressed',String(tastes.includes(n.dataset.taste))));$('taste-hint').textContent=tastes.length?tastes.map(t=>hints[t]).join(' / '):'清、厚、鲜、柔、烈，哪一种更接近此刻？';update();});
   $('taste-form').onsubmit=e=>{e.preventDefault();if(!connected||!screens||!city||!tastes.length||sending)return;sending=true;update();feedback('正在送出这一笔…');socket.send(JSON.stringify({type:'submit',city,tastes}));ackTimer=setTimeout(()=>{sending=false;feedback('未收到确认，请查看装置后再试。');update();},8000);};
 }
