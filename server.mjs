@@ -70,8 +70,11 @@ export function createApp(port = 3000, {dataDir=null,duration=6000}={}) {
       if(data?.type==='settings'){
         if(!ws.operator)return send(ws,{type:'error',message:'请在现场电脑调整作品设置。'});
         const v=data.settings;
-        if(!v||typeof v.landscape!=='boolean'||!Number.isFinite(v.height)||v.height<.3||v.height>.7||!Number.isFinite(v.fontSize)||v.fontSize<15||v.fontSize>50)return;
-        try{store.settings({landscape:v.landscape,height:v.height,fontSize:v.fontSize});broadcast({type:'settings',settings:store.state.settings});}catch{return send(ws,{type:'error',message:'设置未能保存，请检查电脑存储空间。'});}
+        if(!v||typeof v.landscape!=='boolean'||!Number.isFinite(v.height)||v.height<.099||v.height>1||!Number.isFinite(v.fontSize)||v.fontSize<15||v.fontSize>50)return;
+        const top=v.paperTop??(1-v.height)/2,bottom=v.paperBottom??(1+v.height)/2;
+        if(!Number.isFinite(top)||!Number.isFinite(bottom)||top<0||bottom>1||bottom-top<.099||Math.abs(bottom-top-v.height)>.001)return;
+        if(v.rippleCity!==undefined&&!['','guangzhou','xian','nanjing','puer','shenyang'].includes(v.rippleCity))return;
+        try{store.settings({landscape:v.landscape,height:v.height,paperTop:top,paperBottom:bottom,fontSize:v.fontSize,...(v.rippleCity!==undefined?{rippleCity:v.rippleCity}:{})});broadcast({type:'settings',settings:store.state.settings});}catch{return send(ws,{type:'error',message:'设置未能保存，请检查电脑存储空间。'});}
         return;
       }
       if(data?.type !== 'submit'  || !validInput(data)) return send(ws,{type:'error',message:'请选择一座城市和 1–2 个味觉词。'});

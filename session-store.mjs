@@ -1,7 +1,7 @@
 import {existsSync,mkdirSync,readFileSync,writeFileSync,renameSync,copyFileSync} from 'node:fs';
 import {join} from 'node:path';
 
-const fresh=()=>({version:1,id:crypto.randomUUID(),createdAt:Date.now(),records:[],settings:{landscape:true,height:.5,fontSize:25}});
+const fresh=()=>({version:1,id:crypto.randomUUID(),createdAt:Date.now(),records:[],settings:{landscape:true,height:.5,fontSize:25,rippleCity:''}});
 export class SessionStore {
   constructor(directory=null){
     this.directory=directory;

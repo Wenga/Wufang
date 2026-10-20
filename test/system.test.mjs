@@ -24,6 +24,20 @@ test('phone submits, display receives, second entry queues, reconnect receives c
     assert.equal((await fetch(base+'/missing')).status,404);
     const guest=await connect('guest');guest.send(JSON.stringify({type:'submit',city:'nanjing',tastes:['鲜']}));assert.match((await waitFor(guest,'error')).message,/尚未连接/);
     const display=await connect('screen');
+    // Operator preview and installation are separate clients: settings must cross the socket.
+    const controller=await connect('screen');
+    controller.send(JSON.stringify({type:'settings',settings:{landscape:true,height:.6,paperTop:.1,paperBottom:.7,fontSize:25,rippleCity:'xian'}}));
+    assert.equal((await waitFor(display,'settings')).settings.rippleCity,'xian');
+    const reconnected=await connect('screen');
+    const restoredSettings=(await waitFor(reconnected,'history')).settings;
+    assert.equal(restoredSettings.rippleCity,'xian');
+    assert.equal(restoredSettings.paperTop,.1);assert.equal(restoredSettings.paperBottom,.7);assert.equal(restoredSettings.height,.6);
+    display.messages=[];
+    controller.send(JSON.stringify({type:'settings',settings:{landscape:true,height:.5,fontSize:25,rippleCity:''}}));
+    assert.equal((await waitFor(display,'settings')).settings.rippleCity,'');
+    display.messages=[];
+    controller.send(JSON.stringify({type:'settings',settings:{landscape:false,height:.5,fontSize:25}}));
+    assert.equal((await waitFor(display,'settings')).settings.rippleCity,'');
     guest.send(JSON.stringify({type:'submit',city:'nanjing',tastes:['鲜','柔']}));
     const accepted=await waitFor(guest,'accepted'),stroke=await waitFor(display,'stroke');assert.equal(accepted.id,stroke.id);assert.equal(stroke.city,'nanjing');
     const second=await connect('guest');second.send(JSON.stringify({type:'submit',city:'puer',tastes:['厚']}));assert.equal((await waitFor(second,'accepted')).ahead,1);

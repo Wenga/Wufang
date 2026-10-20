@@ -12,8 +12,10 @@ export class Ink {
     this.fibers=Array.from({length:650},()=>({x:r(),y:r(),length:1+r()*5,a:.012+r()*.02}));
     this.resize=new ResizeObserver(()=>this.size());this.resize.observe(canvas);this.size();this.tick=this.tick.bind(this);this.raf=requestAnimationFrame(this.tick);
   }
+  get height(){return (this.paperBottom??.75)-(this.paperTop??.25);}
+  set height(value){this.paperTop=(1-value)/2;this.paperBottom=(1+value)/2;}
   size(){const rect=this.canvas.getBoundingClientRect();this.w=rect.width;this.h=rect.height;this.dpr=Math.min(devicePixelRatio||1,2);this.canvas.width=this.w*this.dpr;this.canvas.height=this.h*this.dpr;}
-  target(city){return {x:city.x*1000,y:((1-this.height)/2+(city.y-.25)*this.height/.5)*562.5};}
+  target(city){return {x:city.x*1000,y:(this.paperTop+(city.y-.25)*this.height/.5)*562.5};}
   add(data,ambient=false){
     if(this.strokes.some(s=>s.id===data.id))return;
     const shape=createStroke(data);if(!shape)return;
@@ -61,7 +63,7 @@ export class Ink {
     c.globalAlpha=.9;c.drawImage(r.wet.paint(),center.x-231,center.y-231,462,462);
     c.restore();
   }
-  paperPath(c){const top=(1-this.height)/2*562.5,bottom=top+this.height*562.5;c.beginPath();c.moveTo(0,top);for(let x=0;x<=1000;x+=10)c.lineTo(x,top+Math.sin(x*.12)*1.1+Math.sin(x*.43)*.7);c.lineTo(1000,bottom);for(let x=1000;x>=0;x-=10)c.lineTo(x,bottom+Math.sin(x*.15)*1.1+Math.cos(x*.38)*.7);c.closePath();}
+  paperPath(c){const top=this.paperTop*562.5,bottom=top+this.height*562.5;c.beginPath();c.moveTo(0,top);for(let x=0;x<=1000;x+=10)c.lineTo(x,top+Math.sin(x*.12)*1.1+Math.sin(x*.43)*.7);c.lineTo(1000,bottom);for(let x=1000;x>=0;x-=10)c.lineTo(x,bottom+Math.sin(x*.15)*1.1+Math.cos(x*.38)*.7);c.closePath();}
   tick(now){
     const dt=Math.min((now-this.last)/1000,.04);this.last=now;this.clock+=dt;const c=this.ctx;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.clearRect(0,0,this.w,this.h);c.scale(this.w/1000,this.h/562.5);
     if(this.paper){this.paperPath(c);c.fillStyle='#f3eee3';c.fill();c.save();this.paperPath(c);c.clip();for(const f of this.fibers){c.strokeStyle=`rgba(106,91,63,${f.a})`;c.lineWidth=.5;c.beginPath();c.moveTo(f.x*1000,f.y*562.5);c.lineTo(f.x*1000+f.length,f.y*562.5+.6);c.stroke();}c.restore();}
@@ -72,11 +74,11 @@ export class Ink {
       c.filter='grayscale(1) blur(7px) contrast(0.7) brightness(1.15)';
       c.drawImage(image,(1000-width)/2,(562.5-height)/2,width,height);c.restore();
     }
-    this.artwork.draw(this.ctx,this.height);
+    this.artwork.draw(this.ctx,this.height,this.paperTop);
     const active=this.strokes.findLast(s=>!s.ambient&&now-s.start<6000),elapsed=active?(now-active.start)/1000:99;
     const label=elapsed<.4?'墨粒暂驻，感受抵达':elapsed<2.2?'四方聚墨，汇入宣纸':elapsed<4.7?`${active.city.name} · ${active.p?active.label||'味觉成笔':''}`:elapsed<6?'余韵留痕，缓缓归静':'墨粒游离，静候一笔';
     if(label!==this.stage){this.stage=label;this.onStage(label);}
-    for(const p of this.particles){if(elapsed>.4&&!this.reduced){p.x=(p.x+p.vx*dt+1)%1;p.y=(p.y+p.vy*dt+1)%1;}const inside=p.y>(1-this.height)/2&&p.y<(1+this.height)/2;c.fillStyle=inside?'rgba(35,38,30,.10)':'rgba(25,28,23,.65)';c.beginPath();c.ellipse(p.x*1000,p.y*562.5,p.r*this.particleScale*(inside?2:1),p.r*this.particleScale*(inside?.6:1),inside?Math.sin(this.clock+p.phase):0,0,6.28);c.fill();}
+    for(const p of this.particles){if(elapsed>.4&&!this.reduced){p.x=(p.x+p.vx*dt+1)%1;p.y=(p.y+p.vy*dt+1)%1;}const inside=p.y>this.paperTop&&p.y<this.paperBottom;c.fillStyle=inside?'rgba(35,38,30,.10)':'rgba(25,28,23,.65)';c.beginPath();c.ellipse(p.x*1000,p.y*562.5,p.r*this.particleScale*(inside?2:1),p.r*this.particleScale*(inside?.6:1),inside?Math.sin(this.clock+p.phase):0,0,6.28);c.fill();}
     if(this.clock>this.nextAmbient&&!active&&!this.reduced){this.nextAmbient=this.clock+12+Math.random()*7;this.add({id:`ambient-${now}`,seed:Math.random(),city:cities[Math.floor(Math.random()*5)].id,tastes:['清','柔']},true);}
     this.strokes=this.strokes.filter(s=>now-s.start<180000&&!this.artwork.ids.has(s.id));
     for(const s of this.strokes){const age=(now-s.start)/1000;this.updateWet(s,age,dt);this.drawStroke(s,age);}
@@ -88,7 +90,7 @@ export class Ink {
     const c=this.ctx,target=this.target(s.city),p=s.p;const age=t>4.6? .10+.90*Math.exp(-(t-4.6)*2):1;const residue=t>6?Math.exp(-(t-6)/42)*clamp((180-t)/30):1;
     const alpha=Math.min(.85,p.alpha)*age*residue*(s.ambient?.17:1);const growth=clamp((t-1.75)/2.5*p.speed);
     if(t<2.65&&!s.ambient&&!this.reduced){
-      const top=(1-this.height)/2*562.5,bottom=(1+this.height)/2*562.5;
+      const top=this.paperTop*562.5,bottom=this.paperBottom*562.5;
       for(const a of s.arrivals){const u=clamp((t-.4-a.delay)/1.7),ease=u*u*(3-2*u);if(u<=0||u>=1)continue;
         const point=v=>({x:a.x+(target.x-a.x)*v+Math.sin(v*Math.PI)*a.bend,y:a.y+(target.y-a.y)*v});
         for(let j=0;j<19;j++){const v=Math.max(0,ease-j*.009),v2=Math.max(0,v-.01),q=point(v),r=point(v2),inside=q.y>=top&&q.y<=bottom;c.strokeStyle=`rgba(26,29,23,${(1-j/20)*(inside?.28:.13)})`;c.lineWidth=inside?1.4+Math.sin(j*2+a.bend)*.8:.65;c.beginPath();c.moveTo(r.x,r.y);c.lineTo(q.x+(inside?Math.sin(j*5)*1.1:0),q.y);c.stroke();}

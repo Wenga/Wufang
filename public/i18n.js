@@ -1,6 +1,7 @@
 import {culturePhrases} from './culture-data.js';
 export const languages=['zh-CN','zh-TW','en'];
 export const phrases=[
+['宣纸上边位置','宣紙上邊位置','Paper top position'],['宣纸下边位置','宣紙下邊位置','Paper bottom position'],
 ...culturePhrases,
 ['酸','酸','Sour'],['咸','鹹','Salty'],['辣','辣','Spicy'],['甜','甜','Sweet'],
 ['，搭配','，搭配',', paired with '],['。','。','.'],

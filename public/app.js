@@ -74,13 +74,16 @@ $('download-artwork').onclick=async()=>{
 };
 function applySettings(settings){
   if(!ink)return;
-  ink.landscapeEnabled=settings.landscape;ink.height=settings.height;ink.cityFontSize=settings.fontSize;
-  $('landscape-toggle').checked=settings.landscape;$('paper-height').value=Math.round(settings.height*100);$('paper-value').textContent=`${Math.round(settings.height*100)}%`;
+  ink.landscapeEnabled=settings.landscape;ink.height=settings.height;ink.paperTop=settings.paperTop??(1-settings.height)/2;ink.paperBottom=settings.paperBottom??(1+settings.height)/2;ink.cityFontSize=settings.fontSize;
+  const rippleCity=settings.rippleCity||'';
+  if((ink.continuousRipple?.city.id||'')!==rippleCity)ink.setRippleCity(rippleCity);
+  $('ripple-city').value=rippleCity;
+  $('landscape-toggle').checked=settings.landscape;for(const edge of ['top','bottom']){const value=Math.round(ink[edge==='top'?'paperTop':'paperBottom']*100);$('paper-'+edge).value=value;$('paper-'+edge+'-value').textContent=`${value}%`;}
   $('city-font-size').value=Math.round(settings.fontSize*4);$('city-font-value').textContent=`${Math.round(settings.fontSize*4)}%`;
 }
 function saveSettings(){
   if(!operator)return;
-  clearTimeout(settingsTimer);settingsTimer=setTimeout(()=>{if(connected)socket.send(JSON.stringify({type:'settings',settings:{landscape:ink.landscapeEnabled,height:ink.height,fontSize:ink.cityFontSize}}));},180);
+  clearTimeout(settingsTimer);settingsTimer=setTimeout(()=>{if(connected)socket.send(JSON.stringify({type:'settings',settings:{landscape:ink.landscapeEnabled,height:ink.height,paperTop:ink.paperTop,paperBottom:ink.paperBottom,fontSize:ink.cityFontSize,rippleCity:ink.continuousRipple?.city.id||''}}));},180);
 }
 connect();
 if(ink){
@@ -92,12 +95,12 @@ if(ink){
     try{const response=await fetch('/api/new-session',{method:'POST',headers:{'X-Wufang-Action':'new-session'}});if(!response.ok)throw Error(await response.text());$('download-status').textContent='已开始新一场，上一场记录已归档。';}
     catch(error){$('download-status').textContent=error.message||'操作失败，请重试。';}finally{resetButton.disabled=false;}
   };
-  for(const id of ['landscape-toggle','paper-height','city-font-size'])$(id).addEventListener('change',saveSettings);
+  for(const id of ['landscape-toggle','paper-top','paper-bottom','city-font-size'])$(id).addEventListener('change',saveSettings);
 
-  $('ripple-city').onchange=e=>{ink.setRippleCity(e.target.value);};
+  $('ripple-city').onchange=e=>{ink.setRippleCity(e.target.value);saveSettings();};
   $('landscape-toggle').onchange=e=>{ink.landscapeEnabled=e.target.checked;};
   $('paper-toggle').onchange=e=>{ink.paper=e.target.checked;};
-  $('paper-height').oninput=e=>{ink.height=Number(e.target.value)/100;$('paper-value').textContent=`${e.target.value}%`;};
+  for(const edge of ['top','bottom'])$('paper-'+edge).oninput=e=>{let value=Number(e.target.value)/100;if(edge==='top')ink.paperTop=Math.min(value,ink.paperBottom-.1);else ink.paperBottom=Math.max(value,ink.paperTop+.1);value=Math.round(ink[edge==='top'?'paperTop':'paperBottom']*100);e.target.value=value;$('paper-'+edge+'-value').textContent=`${value}%`;};
   $('city-font-size').oninput=e=>{ink.cityFontSize=25*Number(e.target.value)/100;$('city-font-value').textContent=`${e.target.value}%`;};
   $('particle-size').oninput=e=>{ink.particleScale=Number(e.target.value)/100;$('particle-value').textContent=`${e.target.value}%`;};
   if(page==='screen'){
