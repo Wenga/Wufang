@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f8f7f3">
+<title>五方入味 · 寻味五城</title><meta name="description" content="在中国地图上寻访五座城市，触摸探索五方入味的菜与茶。">
+<link rel="icon" href="./assets/favicon.svg"><link rel="stylesheet" href="./style.css?v=20">
+<script type="module" src="./assets/vendor/model-viewer.min.js"></script><script type="module" src="./app.js?v=24"></script>
+</head>
+<body>
+<header class="masthead"><a class="brand" href="./">五方入味<span>WU FANG · A TASTE OF FIVE</span></a><span class="header-note" data-i18n="header">五方风土 一茶一味</span><nav class="languages" aria-label="Language"><button data-lang="0" lang="zh-Hans">简</button><button data-lang="1" lang="zh-Hant">繁</button><button data-lang="2" lang="en">EN</button></nav></header>
+<main>
+<section class="atlas" aria-labelledby="atlas-title">
+<h1 id="atlas-title" data-i18n="title">循着风味，认识一座城。</h1>
+<p class="intro" data-i18n="intro">轻点地图上的城市，探索当地风味。</p>
+<div class="map-wrap"><svg id="map" viewBox="0 0 640 600" aria-labelledby="map-title"><title id="map-title">中国地图</title><g id="map-land"><g id="provinces"></g><path id="route"></path></g><g id="markers"></g></svg><div class="map-controls"><button id="map-plus" type="button">＋</button><button id="map-minus" type="button">−</button><button id="map-reset" type="button" data-i18n="mapReset">还原</button></div><p id="map-error" hidden data-i18n="mapError">地图暂时未能加载，请使用下方城市按钮。</p><div class="map-signature">五方<span>风物志</span></div></div>
+<nav id="city-nav" class="city-nav" aria-label="Cities"></nav>
+</section>
+<section class="detail" aria-labelledby="city-name">
+<div class="city-heading"><div><p id="region" class="eyebrow"></p><h2 id="city-name"></h2></div></div>
+<p id="city-story" class="city-story"></p>
+<div class="tabs" role="tablist" aria-label="Food and tea"><button id="dish-tab" role="tab" data-kind="dish" aria-controls="item-panel" data-i18n="dish">一味 · 菜的原型</button><button id="tea-tab" role="tab" data-kind="tea" aria-controls="item-panel" data-i18n="tea">一盏 · 搭配的茶</button></div>
+<div id="item-panel" role="tabpanel" aria-labelledby="dish-tab">
+<div class="item-heading"><h3 id="item-name"></h3><span id="item-subtitle"></span></div>
+<div class="model-stage" id="stage">
+<model-viewer id="viewer" camera-controls touch-action="none" disable-pan disable-zoom auto-rotate auto-rotate-delay="1500" rotation-per-second="15deg" camera-orbit="25deg 65deg 105%" min-camera-orbit="auto 15deg 65%" max-camera-orbit="auto 100deg 180%" shadow-intensity="0.6" shadow-softness="1" exposure="1" interaction-prompt="none" loading="eager" reveal="auto"><div slot="progress-bar" class="loading-bar"><span></span></div></model-viewer>
+<div id="model-status" role="status" aria-live="polite"></div>
+<button id="retry" hidden data-i18n="retry">重新加载</button>
+</div>
+<div class="model-hint" data-i18n="gesture">拖拽查看</div>
+<div class="item-copy"><p id="item-description"></p><a id="item-source" target="_blank" rel="noopener noreferrer" data-i18n="source">阅读风物出处 ↗</a></div>
+</div>
+</section>
+</main>
+<footer><span data-i18n="footer">一程寻味 一席相逢</span><span>WU FANG · <span data-i18n="footerEnd">2026</span></span></footer>
+<noscript>请启用 JavaScript 以浏览地图与 3D 模型。 Please enable JavaScript.</noscript>
+</body></html>

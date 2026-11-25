@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {resolve,extname,sep} from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +35,15 @@ export function createApp(port = 3000, {dataDir=null,duration=6000}={}) {
         const target = url.searchParams.get('url');
         if (!addresses.includes(target)) { res.writeHead(400); return res.end('Invalid address'); }
         res.setHeader('Content-Type','image/svg+xml'); return res.end(await QRCode.toString(target,{type:'svg',margin:1,color:{dark:'#20211f',light:'#ffffff'}}));
+      }
+      if(url.pathname==='/table'){res.writeHead(302,{Location:'/table/'});return res.end();}
+      if(url.pathname.startsWith('/table/')){
+        const root=fileURLToPath(new URL('./public/table/',import.meta.url));
+        const relative=decodeURIComponent(url.pathname.slice('/table/'.length))||'index.html';
+        const target=resolve(root,relative);
+        const types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.glb':'model/gltf-binary','.hdr':'application/octet-stream'};
+        if(!target.startsWith(root.endsWith(sep)?root:root+sep)||!types[extname(target)]){res.writeHead(404);return res.end('Not found');}
+        try{const body=await readFile(target);res.setHeader('Content-Type',types[extname(target)]);res.setHeader('Cache-Control','no-store');return res.end(body);}catch{res.writeHead(404);return res.end('Not found');}
       }
       if (!files[url.pathname]) { res.writeHead(404); return res.end('Not found'); }
       const filename = files[url.pathname];

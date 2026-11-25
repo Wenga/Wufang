@@ -20,8 +20,11 @@ test('phone submits, display receives, second entry queues, reconnect receives c
   const connect=async role=>{const ws=new WebSocket(base.replace('http','ws')+`/?role=${role}`);ws.messages=[];ws.on('message',m=>ws.messages.push(JSON.parse(m)));clients.push(ws);await once(ws,'open');return ws;};
   const waitFor=async(ws,type)=>{for(let i=0;i<100;i++){const m=ws.messages.find(m=>m.type===type);if(m)return m;await new Promise(r=>setTimeout(r,20));}throw Error(`Missing ${type}`);};
   try{
-    for(const route of ['/','/join','/screen','/app.js','/ink.js'])assert.equal((await fetch(base+route)).status,200);
+    for(const route of ['/','/join','/screen','/app.js','/ink.js','/table/','/table/app.js','/table/participation.js','/table/assets/china.json','/table/assets/models/guangzhou-dish.glb'])assert.equal((await fetch(base+route)).status,200);
     assert.equal((await fetch(base+'/missing')).status,404);
+    assert.equal((await fetch(base+'/table/missing.js')).status,404);
+    assert.equal((await fetch(base+'/table/%2e%2e%2fserver.mjs')).status,404);
+    assert.match((await fetch(base+'/table/assets/models/guangzhou-dish.glb')).headers.get('content-type'),/model\/gltf-binary/);
     const guest=await connect('guest');guest.send(JSON.stringify({type:'submit',city:'nanjing',tastes:['鲜']}));assert.match((await waitFor(guest,'error')).message,/尚未连接/);
     const display=await connect('screen');
     // Operator preview and installation are separate clients: settings must cross the socket.
